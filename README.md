@@ -3,10 +3,10 @@
 Seminarski rad iz predmeta Uvod u interaktivno dokazivanje teorema, Matematicki fakultet.
 Profesor Filip Maric. 
 
-##Jezik:
+## Jezik:
 Isabelle
 
-##Ideja:
+## Ideja:
 Kreirati mini biblioteku za deljivost prirodnih brojeva n odredjenim prirodnim brojevima k.
 
 
