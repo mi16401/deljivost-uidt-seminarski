@@ -1,0 +1,1 @@
+# deljivost-uidt-seminarski
