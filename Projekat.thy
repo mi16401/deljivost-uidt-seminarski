@@ -487,5 +487,31 @@ next
       by (simp add: deljiv_8_def jednocifren_zavrsetak_mod_10)
 qed
 qed
-(**deljivost sa 7 ili 11**)
+(**deljivost 11**)
+(*broj je deljiv sa 11 ako mu je razlika zbira cifara na neparnim i parnim mestima deljiva sa 11*)
+fun izdvoj_neparne :: "nat list \<Rightarrow> nat list" where 
+  "izdvoj_neparne [x] =[x]"|
+  "izdvoj_neparne (x#y#xs) = x # izdvoj_neparne xs"
+
+fun izdvoj_parne :: "nat list \<Rightarrow> nat list" where 
+  "izdvoj_parne [x] =[]"|
+  "izdvoj_parne (x#y#xs) = y # izdvoj_parne xs"
+
+definition deljiv_11 ::"nat \<Rightarrow> bool" where
+"deljiv_11 x \<equiv> (sum_list(izdvoj_neparne(izdvoj_cifre x)) - sum_list(izdvoj_neparne(izdvoj_cifre x))) mod 11 = 0 "
+
+lemma deljiv_11_k: "deljiv_11 x \<longleftrightarrow> (\<exists> k. x = 11* k)" 
+proof
+  assume "deljiv_11 x"
+  show "\<exists> k. x = 11 * k"
+  proof- 
+    sorry
+ qed
+next
+  assume "\<exists> k. x = 11* k"
+  show "deljiv_11 x"
+  proof-
+    sorry
+  qed
+qed
 end
