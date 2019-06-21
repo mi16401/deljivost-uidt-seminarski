@@ -415,7 +415,7 @@ definition deljiv_6 ::"nat\<Rightarrow>bool" where
 value "deljiv_6 342"
 value "deljiv_12 8030472"
 
-
+(**deljivost sa 7**)
 (**deljivost sa 8**)
 
 fun trocifren_broj:: "nat list \<Rightarrow> nat" where 
@@ -449,8 +449,8 @@ next
   thus ?thesis
     using trocifren_zavrsetak_bez_liste[of x]
     unfolding trocifren_zavrsetak_def
-    by (metis add.commute comm_semiring_class.distrib mod_mult2_eq not_less numeral_Bit0 numeral_eq_iff numeral_plus_numeral numeral_times_numeral semiring_norm(12) semiring_norm(3) semiring_norm(4) semiring_norm(6) semiring_norm(9))
-
+    using not_less
+    by blast
 qed
 
 lemma deljiv_8_k: "deljiv_8 x \<longleftrightarrow> (\<exists> k. x = 8* k)" 
@@ -466,7 +466,7 @@ proof
     have "x = 100* ((x div 100) mod 10)+ 10 * (x div 10) + x mod 10"
       by auto
     hence "x mod 8 = 0"
-      using `(x mod 1000) mod 8 = 0`
+      using `(x mod 10000) mod 8 = 0`
       by (metis add.right_neutral dvd_eq_mod_eq_0 mod_add_self1 mod_mod_cancel mod_mult_self4 mult_div_mod_eq numeral_Bit0)
       thus ?thesis
       by blast
@@ -487,5 +487,5 @@ next
       by (simp add: deljiv_8_def jednocifren_zavrsetak_mod_10)
 qed
 qed
-(**deljivost sa 7 ili 11**)
+(**deljivost sa 9**)
 end
