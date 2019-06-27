@@ -2,21 +2,8 @@ theory Projekat
   imports Main
 begin
 
-(*ZADATAK: *)
-(*Ako su a i b prosti brojevi veci od 3 i a>b dokazati da je proizvod (a+b)(a-b) deljiv sa 12*)
+(*Nova tema rada: Mala biblioteka definicija deljivosti prirodnih brojeva n odredjenim brojevima k*)
 
-
-(*definicija PROSTOG BROJA*)
-
-definition prost :: "nat \<Rightarrow> bool"  where
- "prost x \<longleftrightarrow> 1 < x \<and> (\<forall>a \<in> {1..x}. a dvd x \<longrightarrow>  a = 1 \<or> a = x)"
-
-(*provera definicije prostog broja*)
-value "prost 5"
-value "prost 12"
-value "prost 113"
-
-(*Broj je deljiv sa 3 ako mu je zbir cifara deljiv sa 3*)
 (*potrebna nam je funkcija koja pravi listu cifara*)
 fun izdvoj_cifre :: "nat \<Rightarrow> nat list" where 
   "izdvoj_cifre x =  (if x \<le> 9 then [x] 
@@ -25,21 +12,25 @@ fun izdvoj_cifre :: "nat \<Rightarrow> nat list" where
 value "izdvoj_cifre 123"
 
 (*racunamo sumu cifara*)
-abbreviation suma :: "nat \<Rightarrow> nat" where
-  "suma x \<equiv> sum_list (izdvoj_cifre x)"
+abbreviation suma_cifara :: "nat \<Rightarrow> nat" where
+  "suma_cifara x \<equiv> sum_list (izdvoj_cifre x)"
 
-value "suma 245"
+value "suma_cifara 245"
 
-(*DELJIV SA 3*)
+(*******************************************DELJIV SA 3*******************************************)
+(*Broj je deljiv sa 3 ako mu je suma cifara deljiva sa 3.*)
 definition deljiv_3 ::"nat\<Rightarrow>bool" where
-"deljiv_3 x = ( if (suma x mod 3 = 0) then True else False ) "
+"deljiv_3 x = ( if (suma_cifara x mod 3 = 0) then True else False ) "
 
 (*provera*)
 value "deljiv_3 12"
 value "deljiv_3 5"
 value "deljiv_3 531840" 
 
-(*Broj je deljiv sa 4 ako mu je dvocifreni zavrsetak deljiv sa 4*)
+(*lema vezana za ovu deljivost je na kraju fajla*)
+
+(*************************************************************************************************)
+(*potrebna nam je funkcija koja racuna dvocifren zavrsetak broja iz liste*)
 (*ova funkcija nam ne treba za nepraznu listu jer nam ona nista ne govori-ne postoji br bez cifara*)
 fun dvocifren_broj:: "nat list \<Rightarrow> nat" where 
 "dvocifren_broj [x] = x" | (*slucaj jednocifrenih brojeva*)
@@ -49,6 +40,7 @@ fun dvocifren_broj:: "nat list \<Rightarrow> nat" where
 definition dvocifren_zavrsetak:: "nat \<Rightarrow> nat" where
 "dvocifren_zavrsetak x = dvocifren_broj(izdvoj_cifre x)"
 
+(*drugi nacin definisanja dvocifrenog zavrsetka bez koriscenja liste cifara*)
 lemma dvocifre_zavrsetak_bez_liste:
   assumes "x \<ge> 9"
   shows "dvocifren_zavrsetak x = (x mod 10) + 10 * ((x div 10) mod 10)"
@@ -56,7 +48,8 @@ lemma dvocifre_zavrsetak_bez_liste:
   unfolding dvocifren_zavrsetak_def
   by simp
 
-(*DELJIV SA 4*)
+(*********************************************DELJIV SA 4******************************************)
+(*Broj je deljiv sa 4 ako mu je dvocifreni zavrsetak deljiv sa 4.*)
 definition deljiv_4 :: "nat \<Rightarrow> bool" where
 "deljiv_4 x \<equiv> dvocifren_zavrsetak x mod 4 = 0"
 
@@ -64,7 +57,66 @@ value "deljiv_4 4"
 value "deljiv_4 5450328"
 value "deljiv_4 15"
 
-(*DELJIV SA 12*)
+(*dvocifren zavrsetak definisan preko liste jednak je sa mod 100*)
+lemma dvocifren_zavrsetak_mod_100: "dvocifren_zavrsetak x = x mod 100"
+proof (cases "x < 9")
+  case True
+  thus ?thesis
+    unfolding dvocifren_zavrsetak_def
+    by (simp add: izdvoj_cifre.simps)
+next
+  case False
+  thus ?thesis
+    using dvocifre_zavrsetak_bez_liste[of x]
+    unfolding dvocifren_zavrsetak_def
+    sorry
+   (*by (metis add.commute comm_semiring_class.distrib mod_mult2_eq not_less 
+      numeral_Bit0 numeral_eq_iff numeral_plus_numeral numeral_times_numeral semiring_norm(12) 
+      semiring_norm(3) semiring_norm(4) semiring_norm(6) semiring_norm(9))*)
+qed
+
+(*lema koja spaja matematicku definiciju sa definicijom preko cifara*)
+lemma deljiv_4_k: "deljiv_4 x \<longleftrightarrow> (\<exists> k. x = 4 * k)" 
+proof
+  assume "deljiv_4 x"
+  show "\<exists> k. x = 4 * k"
+  proof-
+    from `deljiv_4 x`
+    have "(x mod 100) mod 4 = 0"
+      unfolding deljiv_4_def
+      using dvocifren_zavrsetak_mod_100[of x]
+      by auto
+    have "x = 100 * (x div 100) + x mod 100"
+      by auto
+    hence "x mod 4 = 0"
+      using `(x mod 100) mod 4 = 0`
+      by (metis Euclidean_Division.div_eq_0_iff add_diff_cancel_left' 
+          add_self_mod_2 mod_0_imp_dvd mod_mod_cancel mult_2 mult_mod_right numeral.simps(2) 
+          numeral_code(1) numerals(2) odd_one odd_two_times_div_two_nat plus_1_eq_Suc rel_simps(51) 
+          zero_less_diff)
+    thus ?thesis
+      by (simp add: mod_eq_0D)
+  qed
+next
+  assume "\<exists> k. x = 4 * k"
+  show "deljiv_4 x"
+  proof-
+    from `\<exists> k. x = 4 * k`
+    have " x mod 4 = 0"
+      by auto
+    hence "x = 100 * (x div 100) + x mod 100 "
+      unfolding deljiv_4_def
+      by simp
+    hence"(x mod 100) mod 4 = 0"
+      by (metis \<open>x mod 4 = 0\<close> cong_exp_iff_simps(1) cong_exp_iff_simps(2) 
+           dvd_eq_mod_eq_0 mod_mod_cancel)
+    thus ?thesis
+      by (simp add: deljiv_4_def dvocifren_zavrsetak_mod_100)
+qed
+qed
+(**************************************************************************************************)
+
+(********************************************DELJIV SA 12******************************************)
 (*Broj je deljiv brojem 12 ako je deljiv brojem 3 i brojem 4*)
 definition deljiv_12 ::"nat\<Rightarrow>bool" where
 "deljiv_12 x \<equiv> deljiv_3 x \<and> deljiv_4 x"
@@ -73,13 +125,412 @@ definition deljiv_12 ::"nat\<Rightarrow>bool" where
 value "deljiv_12 144"
 value "deljiv_12 8030472"
 
-(*dokaz leme o deljivosti broja sa 3*)
-declare izdvoj_cifre.simps [simp del]
+(*************************************************************************************************)
+(*JEDNOCIFRENI ZAVRSETAK*)
+fun jednocifren_broj:: "nat list \<Rightarrow> nat" where 
+"jednocifren_broj [x] = x" | (*slucaj jednocifrenih brojeva*)
+"jednocifren_broj (x # xs) = x "
 
-(****************************************vise nije tema rada***************************************)
-(*osim dole definisane leme za deljivost sa 4*)
+value "jednocifren_broj [1,2,3] "
+
+(*spajamo sve da ne bismo pisali kompoziciju funkcija*)
+definition jednocifren_zavrsetak:: "nat \<Rightarrow> nat" where
+"jednocifren_zavrsetak x = jednocifren_broj(izdvoj_cifre x)"
+
+value "jednocifren_zavrsetak 53"
+
+lemma jednocifren_zavrsetak_bez_liste:
+  assumes "x \<ge> 9"
+  shows "jednocifren_zavrsetak x = (x mod 10) "
+  using assms
+  unfolding jednocifren_zavrsetak_def
+  by simp
+
+(*****************************************DELJIV SA 2*********************************************)
+(*Broj je deljiv sa 2 ako mu je poslednja cifra deljiva sa 2.*)
+definition deljiv_2 :: "nat \<Rightarrow> bool" where
+"deljiv_2 x \<equiv> jednocifren_zavrsetak x mod 2 = 0"
+
+lemma jednocifren_zavrsetak_mod_10: "jednocifren_zavrsetak x = x mod 10"
+proof (cases "x < 9")
+  case True
+  thus ?thesis
+    unfolding jednocifren_zavrsetak_def
+    by (simp add: izdvoj_cifre.simps)
+next
+  case False
+  thus ?thesis
+    using jednocifren_zavrsetak_bez_liste[of x]
+    unfolding dvocifren_zavrsetak_def
+    using not_less
+    by blast
+qed
+          
+(*lema koja spaja matematicku definiciju sa definicijom preko cifara*)
+lemma deljiv_2_k: "deljiv_2 x \<longleftrightarrow> (\<exists> k. x = 2* k)" 
+proof
+  assume "deljiv_2 x"
+  show "\<exists> k. x = 2 * k"
+  proof-
+    from `deljiv_2 x`
+    have "(x mod 10) mod 2 = 0"
+      unfolding deljiv_4_def
+      using jednocifren_zavrsetak_mod_10[of x]
+      by (simp add: deljiv_2_def)
+    have "x = 10 * (x div 10) + x mod 10"
+      by auto
+    hence "x mod 2 = 0"
+      using `(x mod 10) mod 2 = 0`
+      by (metis add_self_mod_2 dvd_eq_mod_eq_0 mod_mod_cancel numeral_Bit0)
+    thus ?thesis
+      by blast
+  qed
+next
+  assume "\<exists> k. x = 2 * k"
+  show "deljiv_2 x"
+  proof-
+    from `\<exists> k. x = 2 * k`
+    have " x mod 2 = 0"
+      by auto
+    hence"x = 10 * (x div 10) + x mod 10"
+      unfolding deljiv_2_def
+      by simp
+    hence"(x mod 10) mod 2 = 0"
+      by (metis \<open>x mod 2 = 0\<close> add_self_mod_2 dvd_eq_mod_eq_0 mod_mod_cancel numeral_Bit0)
+    thus ?thesis
+      by (simp add: deljiv_2_def jednocifren_zavrsetak_mod_10)
+qed
+qed
+
+(***********************************************DELJIV SA 5****************************************)
+(*Broj je deljiv sa 5 ako mu je poslednja cifra deljiva sa 5*)
+definition deljiv_5 :: "nat \<Rightarrow> bool" where
+"deljiv_5 x \<equiv> jednocifren_zavrsetak x mod 5 = 0"
+
+(*lema koja spaja matematicku definiciju i definiciju preko cifara*)
+lemma deljiv_5_k: "deljiv_5 x \<longleftrightarrow> (\<exists> k. x = 5* k)" 
+proof
+  assume "deljiv_5 x"
+  show "\<exists> k. x = 5 * k"
+  proof-
+    from `deljiv_5 x`
+    have "(x mod 10) mod 5 = 0"
+      unfolding deljiv_5_def
+      using jednocifren_zavrsetak_mod_10[of x]
+      by (simp add: deljiv_5_def)
+    have "x = 10 * (x div 10) + x mod 10"
+      by auto
+    hence "x mod 5 = 0"
+      using `(x mod 10) mod 5 = 0`
+      by (metis add.right_neutral dvd_eq_mod_eq_0 mod_add_self1 mod_mod_cancel 
+          mod_mult_self4 mult_div_mod_eq numeral_Bit0)
+      thus ?thesis
+      by blast
+  qed
+next
+  assume "\<exists> k. x = 5 * k"
+  show "deljiv_5 x"
+  proof-
+    from `\<exists> k. x = 5 * k`
+    have " x mod 5 = 0"
+      by auto
+    hence"x = 10 * (x div 10) + x mod 10"
+      unfolding deljiv_5_def
+      by simp
+    hence"(x mod 10) mod 5 = 0"
+      by (metis \<open>x mod 5 = 0\<close> dvd_eq_mod_eq_0 mod_mod_cancel mod_mult_self1_is_0 mult_2_right 
+          numeral_Bit0)
+    thus ?thesis
+      by (simp add: deljiv_5_def jednocifren_zavrsetak_mod_10)
+qed
+qed
+
+(********************************************DELJIV SA 6*******************************************)
+(*Broj je deljiv sa 6 ako je deljiv sa 2 i sa 3*)
+definition deljiv_6 ::"nat\<Rightarrow>bool" where
+"deljiv_6 x \<equiv> deljiv_3 x \<and> deljiv_2 x"
+
+(*provera*)
+value "deljiv_6 342"
+value "deljiv_12 8030472"
+
+(**************************************************************************************************)
+(*TROCIFRENI ZAVRSETAK*)
+fun trocifren_broj:: "nat list \<Rightarrow> nat" where 
+"trocifren_broj [x] = x" |
+"trocifren_broj [x,y] = x + 10*y" | (*slucaj dvocifrenog broja*)
+"trocifren_broj (x # y #z # xs) = x + 10*y+ 100*z"
+value "trocifren_broj [1,2,3,4]"
+
+definition trocifren_zavrsetak:: "nat \<Rightarrow> nat" where
+"trocifren_zavrsetak x = trocifren_broj(izdvoj_cifre x)"
+
+value "trocifren_zavrsetak 1234"
+value "trocifren_zavrsetak 52"
+value "trocifren_zavrsetak 5"
+
+lemma trocifren_zavrsetak_bez_liste:
+  assumes "x \<ge> 9"
+  shows "trocifren_zavrsetak x = (x mod 10) + 10 * ((x div 10) mod 10 )+ 100*((x div 100) mod 10)"
+  using assms
+  unfolding trocifren_zavrsetak_def
+  sorry
+
+
+(*******************************************DELJIV SA 8********************************************)
+(*Broj je deljiv sa 8 ako mu je trocifreni zavrsetak deljiv sa 8.*)
+definition deljiv_8 :: "nat \<Rightarrow> bool" where
+"deljiv_8 x \<equiv> trocifren_zavrsetak x mod 8 = 0"
+
+(*potrebno za lemu ispod*)
+lemma trocifren_zavrsetak_mod_1000: "trocifren_zavrsetak x = x mod 1000"
+proof (cases "x < 9")
+  case True
+  thus ?thesis
+    unfolding trocifren_zavrsetak_def
+    by (simp add: izdvoj_cifre.simps)
+next
+  case False
+  thus ?thesis
+    using trocifren_zavrsetak_bez_liste[of x]
+    unfolding trocifren_zavrsetak_def
+    sorry
+   (* by (metis add.commute comm_semiring_class.distrib mod_mult2_eq 
+        not_less numeral_Bit0 numeral_eq_iff numeral_plus_numeral numeral_times_numeral 
+        semiring_norm(12) semiring_norm(3) semiring_norm(4) semiring_norm(6) semiring_norm(9))*)
+qed
+
+(*lema koja spaja matematicku definiciju i definiciju preko cifara*)
+lemma deljiv_8_k: "deljiv_8 x \<longleftrightarrow> (\<exists> k. x = 8* k)" 
+proof
+  assume "deljiv_8 x"
+  show "\<exists> k. x = 8 * k"
+  proof-
+    from `deljiv_8 x`
+    have "(x mod 1000) mod 8 = 0"
+      unfolding deljiv_8_def
+      using trocifren_zavrsetak_mod_1000[of x]
+      by (simp add: deljiv_8_def)
+    have "x = 1000 * (x div 1000) + x mod 1000" (*ovde je bila greska*)
+      by auto
+    hence "x mod 8 = 0"
+      using `(x mod 1000) mod 8 = 0`
+      by (metis Euclidean_Division.div_eq_0_iff add_diff_cancel_left' 
+          add_self_mod_2 mod_0_imp_dvd mod_mod_cancel mult_2 mult_mod_right numeral.simps(2) 
+          numeral_code(1) numerals(2) odd_one odd_two_times_div_two_nat plus_1_eq_Suc rel_simps(51) 
+          zero_less_diff)
+      thus ?thesis
+        by(simp add: mod_eq_0D)
+  qed
+next
+  assume "\<exists> k. x = 8 * k"
+  show "deljiv_8 x"
+  proof-
+    from `\<exists> k. x = 8 * k`
+    have " x mod 8 = 0"
+      by auto
+    hence "x =  1000*(x div 1000) + x mod 1000"
+      unfolding deljiv_8_def
+      by simp
+    hence"(x mod 10) mod 8 = 0"
+      by (metis \<open>x mod 8 = 0\<close> dvd_eq_mod_eq_0 mod_mod_cancel mod_mult_self1_is_0 
+          mult_2_right numeral_Bit0 )
+    thus ?thesis
+      by (simp add: deljiv_8_def trocifren_zavrsetak_mod_1000)
+qed
+qed
+
+(*******************************************DELJIV SA 11*****************************************)
+(*Broj je deljiv sa 11 ako mu je razlika zbira cifara na neparnim i parnim mestima deljiva sa 11*)
+fun izdvoj_neparne :: "nat list \<Rightarrow> nat list" where 
+  "izdvoj_neparne [x] =[x]"|
+  "izdvoj_neparne (x#y#xs) = x # izdvoj_neparne xs"
+
+fun izdvoj_parne :: "nat list \<Rightarrow> nat list" where 
+  "izdvoj_parne [x] =[]"|
+  "izdvoj_parne (x#y#xs) = y # izdvoj_parne xs"
+
+definition deljiv_11 ::"nat \<Rightarrow> bool" where
+"deljiv_11 x \<equiv> (sum_list(izdvoj_neparne(izdvoj_cifre x)) - sum_list(izdvoj_neparne(izdvoj_cifre x))) mod 11 = 0 "
+
+(*lema koja spaja matematicku definiciju i definiciju preko cifara*)
+lemma deljiv_11_k: "deljiv_11 x \<longleftrightarrow> (\<exists> k. x = 11* k)" 
+proof
+  assume "deljiv_11 x"
+  show "\<exists> k. x = 11 * k"
+    sorry
+next
+  assume "\<exists> k. x = 11* k"
+  show "deljiv_11 x"
+    sorry
+qed
+(*******************************************DELJIV SA 9*******************************************)
+(*Broj je deljiv sa 9 ako mu je suma cifara deljiva sa 9.*)
+definition deljiv_9::"nat \<Rightarrow> bool" where
+"deljiv_9 x \<longleftrightarrow> suma_cifara x mod 9 = 0"
+
+(*provera*)
+value "deljiv_9 27"
+value "deljiv_9 9"
+value "deljiv_9 13" 
+
+(******************************************DELJIV SA 10*******************************************)
+(*Broj je deljiv sa 10 ako mu je poslednja cifra 0*)
+definition deljiv_10 :: "nat \<Rightarrow> bool" where
+"deljiv_10 x \<equiv> jednocifren_zavrsetak x  = 0"
+
+(*lema koja spaja matematicku definiciju sa definicijom preko cifara*)
+lemma deljiv_10_k: "deljiv_10 x \<longleftrightarrow> (\<exists> k. x = 10*k)" 
+proof
+  assume "deljiv_10 x"
+  show "\<exists> k. x = 10 * k"
+  proof-
+    from `deljiv_10 x`
+    have "(x mod 10) mod 10 = 0"
+      unfolding deljiv_10_def
+      using jednocifren_zavrsetak_mod_10[of x]
+      by (simp add: deljiv_10_def)
+    have "x = 10 * (x div 10) + x mod 10"
+      by auto
+    hence "x mod 10 = 0"
+      using `(x mod 10) mod 10 = 0`
+      by simp
+    thus ?thesis
+      by blast
+  qed
+next
+  assume "\<exists> k. x = 10 * k"
+  show "deljiv_10 x"
+  proof-
+    from `\<exists> k. x = 10 * k`
+    have " x mod 10 = 0"
+      by auto
+    hence "x = 10 * (x div 10) + x mod 10"
+      unfolding deljiv_10_def
+      by auto
+    hence"(x mod 10) mod 10 = 0"
+      by (simp add: \<open>x mod 10 = 0\<close>)
+    thus ?thesis
+      by (simp add: deljiv_10_def jednocifren_zavrsetak_mod_10)
+qed
+qed
+
+(********************************************DELJIV SA 15*******************************************)
+(*Broj je deljiv sa 15 ako je deljiv sa 3 i sa 5*)
+definition deljiv_15 ::"nat\<Rightarrow>bool" where
+"deljiv_15 x \<equiv> deljiv_3 x \<and> deljiv_5 x"
+
+(*provera*)
+value "deljiv_15 255"
+value "deljiv_15 25"
+
+(********************************************DELJIV SA 18*******************************************)
+(*Broj je deljiv sa 18 ako je deljiv sa 2 i sa 9*)
+definition deljiv_18 ::"nat\<Rightarrow>bool" where
+"deljiv_18 x \<equiv> deljiv_2 x \<and> deljiv_9 x"
+
+(*provera*)
+value "deljiv_18 255"
+value "deljiv_18 4428"
+
+(*********************************************DELJIV SA 20******************************************)
+(*Broj je deljiv sa 20 ako mu je dvocifreni zavrsetak deljiv sa 20.*)
+definition deljiv_20 :: "nat \<Rightarrow> bool" where
+"deljiv_20 x \<equiv> dvocifren_zavrsetak x mod 20 = 0"
+
+value "deljiv_20 20"
+value "deljiv_20 253100"
+value "deljiv_20 3"
+
+
+(*lema koja spaja matematicku definiciju sa definicijom preko cifara*)
+lemma deljiv_20_k: "deljiv_20 x \<longleftrightarrow> (\<exists> k. x = 20 * k)" 
+proof
+  assume "deljiv_20 x"
+  show "\<exists> k. x = 20 * k"
+  proof-
+    from `deljiv_20 x`
+    have "(x mod 100) mod 20 = 0"
+      unfolding deljiv_20_def
+      using dvocifren_zavrsetak_mod_100[of x]
+      by auto
+    have "x = 100 * (x div 100) + x mod 100"
+      by auto
+    hence "x mod 20 = 0"
+      using `(x mod 100) mod 20 = 0`
+      sorry
+    thus ?thesis
+      by (simp add: mod_eq_0D)
+  qed
+next
+  assume "\<exists> k. x = 20 * k"
+  show "deljiv_20 x"
+  proof-
+    from `\<exists> k. x = 20 * k`
+    have " x mod 20 = 0"
+      by auto
+    hence "x = 100 * (x div 100) + x mod 100 "
+      unfolding deljiv_20_def
+      by simp
+    hence"(x mod 100) mod 20 = 0"
+      sorry
+    thus ?thesis
+      by (simp add: deljiv_20_def dvocifren_zavrsetak_mod_100)
+qed
+qed
+
+(*********************************************DELJIV SA 25******************************************)
+(*Broj je deljiv sa 25 ako mu je dvocifreni zavrsetak deljiv sa 25.*)
+definition deljiv_25 :: "nat \<Rightarrow> bool" where
+"deljiv_25 x \<equiv> dvocifren_zavrsetak x mod 25 = 0"
+
+value "deljiv_25 50"
+value "deljiv_25 15"
+
+(*lema koja spaja matematicku definiciju sa definicijom preko cifara*)
+lemma deljiv_25_k: "deljiv_25 x \<longleftrightarrow> (\<exists> k. x = 25 * k)" 
+proof
+  assume "deljiv_25 x"
+  show "\<exists> k. x = 25 * k"
+  proof-
+    from `deljiv_25 x`
+    have "(x mod 100) mod 25 = 0"
+      unfolding deljiv_25_def
+      using dvocifren_zavrsetak_mod_100[of x]
+      by auto
+    have "x = 100 * (x div 100) + x mod 100"
+      by auto
+    hence "x mod 25 = 0"
+      using `(x mod 100) mod 25 = 0`
+      sorry
+    thus ?thesis
+      by (simp add: mod_eq_0D)
+  qed
+next
+  assume "\<exists> k. x = 25 * k"
+  show "deljiv_25 x"
+  proof-
+    from `\<exists> k. x = 25 * k`
+    have " x mod 25 = 0"
+      by auto
+    hence "x = 100 * (x div 100) + x mod 100 "
+      unfolding deljiv_25_def
+      by simp
+    hence"(x mod 100) mod 25 = 0"
+      by (metis \<open>x mod 25 = 0\<close> mod_0_imp_dvd mod_mod_cancel mod_mult_self1_is_0 
+          mod_mult_self4 mult_2_right numeral.simps(2))
+    thus ?thesis
+      by (simp add: deljiv_25_def dvocifren_zavrsetak_mod_100)
+qed
+qed
+
+(**************************************************************************************)
+(*DOKAZ TEOEREME ZA DELJIVOST SA 3 - x deljiv sa 3 akko suma cifara od x deljiva sa 3*)
+
+declare izdvoj_cifre.simps [simp del] (*ovo pravi problem ostalim dokazima pa je zato na kraju!*)
+
 lemma suma_cifara_manja:
-  shows "suma x \<le> x"
+  shows "suma_cifara x \<le> x"
 proof (induction x rule:izdvoj_cifre.induct)
   case (1 x)
   show ?case
@@ -96,12 +547,12 @@ proof (induction x rule:izdvoj_cifre.induct)
 qed
 
 lemma dvd_3_suma_cifara:
- shows "3 dvd x \<longleftrightarrow> 3 dvd suma x"
+ shows "3 dvd x \<longleftrightarrow> 3 dvd suma_cifara x"
  proof-
-  have "suma x \<le> x"
+  have "suma_cifara x \<le> x"
     by (rule suma_cifara_manja)
   moreover
-  have "3 dvd (x - suma x)"
+  have "3 dvd (x - suma_cifara x)"
   proof (induct x rule:izdvoj_cifre.induct)
     case (1 x)
     show ?case
@@ -113,10 +564,10 @@ lemma dvd_3_suma_cifara:
       case False
       have "x = 10 * (x div 10) + x mod 10"
         by simp
-      hence "x - suma x = 10*(x div 10) - suma (x div 10)"
+      hence "x - suma_cifara x = 10*(x div 10) - suma_cifara(x div 10)"
         using izdvoj_cifre.simps[of x] `\<not> x \<le> 9`
         by (metis add_diff_cancel_right' diff_diff_left sum_list.Cons)
-      hence "x - suma x = 9*(x div 10) + (x div 10 - suma (x div 10))"
+      hence "x - suma_cifara x = 9*(x div 10) + (x div 10 - suma_cifara (x div 10))"
         using suma_cifara_manja[of "x div 10"]
         by auto
       thus ?thesis
@@ -130,8 +581,21 @@ lemma dvd_3_suma_cifara:
     by blast
 qed
 
-(*GLAVNA TEOREMA KOJU DOKAZUJEMO - otprilike pomocne leme koje ce nam trebati*)
 
+(**************************************************************************************************)
+(****************************************prethodna tema rada***************************************)
+(*definicija PROSTOG BROJA*)
+
+definition prost :: "nat \<Rightarrow> bool"  where
+ "prost x \<longleftrightarrow> 1 < x \<and> (\<forall>a \<in> {1..x}. a dvd x \<longrightarrow>  a = 1 \<or> a = x)"
+
+(*provera definicije prostog broja*)
+value "prost 5"
+value "prost 12"
+value "prost 113"
+
+(*GLAVNA TEOREMA KOJU DOKAZUJEMO - otprilike pomocne leme koje ce nam trebati*)
+(*Ako su a i b prosti brojevi veci od 3 i a>b dokazati da je proizvod (a+b)(a-b) deljiv sa 12*)
 (*1:  Prosti brojevi veci od 3 su neparni pa su a i b neparni. 
   2:  Njihov zbir a+b i njihova razlika a-b su parni pa je i proizvod paran deljiv sa 4. 
   3:  Pri deljenju sa brojem 3 brojevi a i b mogu imati ostatak 1 ili 2. 
@@ -173,58 +637,7 @@ lemma proizvod_parnih_paran:
   unfolding prost_def
   by fastforce
 
-(*2.2.2 Proizvod parnih je paran broj deljiv sa cetiri*)
-
-lemma dvocifren_zavrsetak_mod_100: "dvocifren_zavrsetak x = x mod 100"
-proof (cases "x < 9")
-  case True
-  thus ?thesis
-    unfolding dvocifren_zavrsetak_def
-    by (simp add: izdvoj_cifre.simps)
-next
-  case False
-  thus ?thesis
-    using dvocifre_zavrsetak_bez_liste[of x]
-    unfolding dvocifren_zavrsetak_def
-    by (metis add.commute comm_semiring_class.distrib mod_mult2_eq not_less numeral_Bit0 numeral_eq_iff numeral_plus_numeral numeral_times_numeral semiring_norm(12) semiring_norm(3) semiring_norm(4) semiring_norm(6) semiring_norm(9))
-qed
-          
-(*lema koja spaja matematicku definiciju sa definicijom preko cifara - na ovaj nacin treba i za ostale*)
-lemma deljiv_4_k: "deljiv_4 x \<longleftrightarrow> (\<exists> k. x = 4 * k)" 
-proof
-  assume "deljiv_4 x"
-  show "\<exists> k. x = 4 * k"
-  proof-
-    from `deljiv_4 x`
-    have "(x mod 100) mod 4 = 0"
-      unfolding deljiv_4_def
-      using dvocifren_zavrsetak_mod_100[of x]
-      by auto
-    have "x = 100 * (x div 100) + x mod 100"
-      by auto
-    hence "x mod 4 = 0"
-      using `(x mod 100) mod 4 = 0`
-      by (metis Euclidean_Division.div_eq_0_iff add_diff_cancel_left' add_self_mod_2 mod_0_imp_dvd mod_mod_cancel mult_2 mult_mod_right numeral.simps(2) numeral_code(1) numerals(2) odd_one odd_two_times_div_two_nat plus_1_eq_Suc rel_simps(51) zero_less_diff)
-    thus ?thesis
-      by (simp add: mod_eq_0D)
-  qed
-next
-  assume "\<exists> k. x = 4 * k"
-  show "deljiv_4 x"
-  proof-
-    from `\<exists> k. x = 4 * k`
-    have " x mod 4 = 0"
-      by auto
-    hence"x = 100 * (x div 100) + x mod 100 "
-      unfolding deljiv_4_def
-      by simp
-    hence"(x mod 100) mod 4 = 0"
-      by (metis \<open>x mod 4 = 0\<close> cong_exp_iff_simps(1) cong_exp_iff_simps(2) dvd_eq_mod_eq_0 mod_mod_cancel)
-    thus ?thesis
-      by (simp add: deljiv_4_def dvocifren_zavrsetak_mod_100)
-qed
-qed
-
+(*2.2.2 Proizvod parnih je paran broj deljiv sa cetiri*)          
 lemma proizvod_parnih_deljiv_sa_cetiri: (*dokazana na konsultacijama*)
   assumes "x mod 2 = 0" "y mod 2 = 0" "prost x" "prost y"
   shows "deljiv_4 (x*y)"
@@ -243,7 +656,7 @@ proof-
 qed
 
 (*3. Ako je broj veci od 3 i prost - onda pri deljenju sa brojem 3 ostatak moze biti 1 ili 2*)
-lemma ostatak_pri_deljenju_sa_3: (*PROBLEM*)
+lemma ostatak_pri_deljenju_sa_3:
   assumes "x > 3" "prost x"
   shows "(x mod 3 = 1) \<or> (x mod 3 = 2)"
   using assms 
@@ -258,13 +671,14 @@ lemma razlika_sa_tri:
   shows "deljiv_3 (x - y) "
   using assms
   unfolding deljiv_3_def prost_def
-  by (smt Suc3_eq_add_3 Suc_le_mono add.right_neutral add_le_cancel_left 
+  sorry
+  (*by (smt Suc3_eq_add_3 Suc_le_mono add.right_neutral add_le_cancel_left 
       diff_Suc_Suc diff_is_0_eq dvd_3_suma_cifara dvd_eq_mod_eq_0 le0 le_0_eq 
-      linorder_not_less mod_0 mod_eq_dvd_iff_nat numerals(2) order_le_less suma_cifara_manja zero_less_diff)
+      linorder_not_less mod_0 mod_eq_dvd_iff_nat numerals(2) order_le_less suma_cifara_manja zero_less_diff)*)
 
 (*5. Ako dva broja daju razlicit ostatak pri deljenju sa 3 i prosti su i veci su od 3
 - njihov zbir je deljiv sa tri*)
-lemma zbir_sa_tri: (*PROBLEM*)
+lemma zbir_sa_tri:
   assumes "x > 3" "y > 3" "prost x" "prost y"
   assumes "(x mod 3) \<noteq> (y mod 3)"
   shows "deljiv_3 (x + y)"
@@ -274,7 +688,7 @@ lemma zbir_sa_tri: (*PROBLEM*)
 
 (*6. Nezavinso kakav je ostatak (pri deljejnju sa 3) proizvod brojeva x i y za koje vazi da su: prosti i veci od 3
 njihov proizvod je deljiv sa tri*)
-lemma proizvod_sa_tri: (*PROBLEM*)
+lemma proizvod_sa_tri:
   assumes "x > 3" "y > 3" "prost x" "prost y"
   shows "deljiv_3 (x*y)"
   using assms
@@ -287,231 +701,4 @@ i imamo dokaz da je proizvod deljiv sa 12.
 Koristili smo u lemama opsti slucaj za neka dva broja, a u glavnoj teoremi cemo to primeniti na
 brojeve (a-b) i (a+b)*)
 
-(***********deljivost ostalih brojeva****************)
-
-
-(**deljivost sa 2**)
-fun jednocifren_broj:: "nat list \<Rightarrow> nat" where 
-"jednocifren_broj [x] = x" | (*slucaj jednocifrenih brojeva*)
-"jednocifren_broj (x # xs) = x "
-
-value "jednocifren_broj [1,2,3] "
-
-(*spajamo sve da ne bismo pisali kompoziciju funkcija*)
-definition jednocifren_zavrsetak:: "nat \<Rightarrow> nat" where
-"jednocifren_zavrsetak x = jednocifren_broj(izdvoj_cifre x)"
-
-value "jednocifren_zavrsetak 53"
-
-lemma jednocifren_zavrsetak_bez_liste:
-  assumes "x \<ge> 9"
-  shows "jednocifren_zavrsetak x = (x mod 10) "
-  using assms
-  unfolding jednocifren_zavrsetak_def
-  sorry (*ne znam sto ovo nece*)
-
-definition deljiv_2 :: "nat \<Rightarrow> bool" where
-"deljiv_2 x \<equiv> jednocifren_zavrsetak x mod 2 = 0"
-
-lemma jednocifren_zavrsetak_mod_10: "jednocifren_zavrsetak x = x mod 10"
-proof (cases "x < 9")
-  case True
-  thus ?thesis
-    unfolding jednocifren_zavrsetak_def
-    by (simp add: izdvoj_cifre.simps)
-next
-  case False
-  thus ?thesis
-    using jednocifren_zavrsetak_bez_liste[of x]
-    unfolding dvocifren_zavrsetak_def
-    using not_less
-    by blast
-qed
-          
-(*lema koja spaja matematicku definiciju sa definicijom preko cifara - na ovaj nacin treba i za ostale*)
-lemma deljiv_2_k: "deljiv_2 x \<longleftrightarrow> (\<exists> k. x = 2* k)" 
-proof
-  assume "deljiv_2 x"
-  show "\<exists> k. x = 2 * k"
-  proof-
-    from `deljiv_2 x`
-    have "(x mod 10) mod 2 = 0"
-      unfolding deljiv_4_def
-      using jednocifren_zavrsetak_mod_10[of x]
-      by (simp add: deljiv_2_def)
-    have "x = 10 * (x div 10) + x mod 10"
-      by auto
-    hence "x mod 2 = 0"
-      using `(x mod 10) mod 2 = 0`
-      by (metis add_self_mod_2 dvd_eq_mod_eq_0 mod_mod_cancel numeral_Bit0)
-    thus ?thesis
-      by blast
-  qed
-next
-  assume "\<exists> k. x = 2 * k"
-  show "deljiv_2 x"
-  proof-
-    from `\<exists> k. x = 2 * k`
-    have " x mod 2 = 0"
-      by auto
-    hence"x = 10 * (x div 10) + x mod 10"
-      unfolding deljiv_2_def
-      by simp
-    hence"(x mod 10) mod 2 = 0"
-      by (metis \<open>x mod 2 = 0\<close> add_self_mod_2 dvd_eq_mod_eq_0 mod_mod_cancel numeral_Bit0)
-    thus ?thesis
-      by (simp add: deljiv_2_def jednocifren_zavrsetak_mod_10)
-qed
-qed
-
-
-(**deljivost sa 3-pokazano u kodu iznad**)
-(**deljivost sa 4-pokazano u kodu iznad**)
-(**deljivost sa 5**)
-definition deljiv_5 :: "nat \<Rightarrow> bool" where
-"deljiv_5 x \<equiv> jednocifren_zavrsetak x mod 5 = 0"
-
-lemma deljiv_5_k: "deljiv_5 x \<longleftrightarrow> (\<exists> k. x = 5* k)" 
-proof
-  assume "deljiv_5 x"
-  show "\<exists> k. x = 5 * k"
-  proof-
-    from `deljiv_5 x`
-    have "(x mod 10) mod 5 = 0"
-      unfolding deljiv_5_def
-      using jednocifren_zavrsetak_mod_10[of x]
-      by (simp add: deljiv_5_def)
-    have "x = 10 * (x div 10) + x mod 10"
-      by auto
-    hence "x mod 5 = 0"
-      using `(x mod 10) mod 5 = 0`
-      by (metis add.right_neutral dvd_eq_mod_eq_0 mod_add_self1 mod_mod_cancel mod_mult_self4 mult_div_mod_eq numeral_Bit0)
-      thus ?thesis
-      by blast
-  qed
-next
-  assume "\<exists> k. x = 5 * k"
-  show "deljiv_5 x"
-  proof-
-    from `\<exists> k. x = 5 * k`
-    have " x mod 5 = 0"
-      by auto
-    hence"x = 10 * (x div 10) + x mod 10"
-      unfolding deljiv_5_def
-      by simp
-    hence"(x mod 10) mod 5 = 0"
-      by (metis \<open>x mod 5 = 0\<close> dvd_eq_mod_eq_0 mod_mod_cancel mod_mult_self1_is_0 mult_2_right numeral_Bit0)
-    thus ?thesis
-      by (simp add: deljiv_5_def jednocifren_zavrsetak_mod_10)
-qed
-qed
-
-(**deljivost sa 6**)
-
-definition deljiv_6 ::"nat\<Rightarrow>bool" where
-"deljiv_6 x \<equiv> deljiv_3 x \<and> deljiv_2 x"
-
-(*provera*)
-value "deljiv_6 342"
-value "deljiv_12 8030472"
-
-
-(**deljivost sa 8**)
-
-fun trocifren_broj:: "nat list \<Rightarrow> nat" where 
-"trocifren_broj [x] = x" |
-"trocifren_broj (x # y #z # xs) = x + 10*y+ 100*z"
-value "trocifren_broj [1,2,3,4]"
-
-definition trocifren_zavrsetak:: "nat \<Rightarrow> nat" where
-"trocifren_zavrsetak x = trocifren_broj(izdvoj_cifre x)"
-
-value "trocifren_zavrsetak 1234"
-
-lemma trocifren_zavrsetak_bez_liste:
-  assumes "x \<ge> 9"
-  shows "trocifren_zavrsetak x = (x mod 10) + 10 * ((x div 10) mod 10 )+ 100* ((x div 100) mod 10 )"
-  using assms
-  unfolding trocifren_zavrsetak_def
-  sorry
-
-definition deljiv_8 :: "nat \<Rightarrow> bool" where
-"deljiv_8 x \<equiv> trocifren_zavrsetak x mod 8 = 0"
-
-lemma trocifren_zavrsetak_mod_1000: "trocifren_zavrsetak x = x mod 1000"
-proof (cases "x < 9")
-  case True
-  thus ?thesis
-    unfolding trocifren_zavrsetak_def
-    by (simp add: izdvoj_cifre.simps)
-next
-  case False
-  thus ?thesis
-    using trocifren_zavrsetak_bez_liste[of x]
-    unfolding trocifren_zavrsetak_def
-    by (metis add.commute comm_semiring_class.distrib mod_mult2_eq not_less numeral_Bit0 numeral_eq_iff numeral_plus_numeral numeral_times_numeral semiring_norm(12) semiring_norm(3) semiring_norm(4) semiring_norm(6) semiring_norm(9))
-
-qed
-
-lemma deljiv_8_k: "deljiv_8 x \<longleftrightarrow> (\<exists> k. x = 8* k)" 
-proof
-  assume "deljiv_8 x"
-  show "\<exists> k. x = 8 * k"
-  proof-
-    from `deljiv_8 x`
-    have "(x mod 1000) mod 8 = 0"
-      unfolding deljiv_8_def
-      using trocifren_zavrsetak_mod_1000[of x]
-      by (simp add: deljiv_8_def)
-    have "x = 100* ((x div 100) mod 10)+ 10 * (x div 10) + x mod 10"
-      by auto
-    hence "x mod 8 = 0"
-      using `(x mod 1000) mod 8 = 0`
-      by (metis add.right_neutral dvd_eq_mod_eq_0 mod_add_self1 mod_mod_cancel mod_mult_self4 mult_div_mod_eq numeral_Bit0)
-      thus ?thesis
-      by blast
-  qed
-next
-  assume "\<exists> k. x = 8 * k"
-  show "deljiv_8 x"
-  proof-
-    from `\<exists> k. x = 8 * k`
-    have " x mod 8 = 0"
-      by auto
-    hence"x =  100* ((x div 100) mod 10)+10 * (x div 10) + x mod 10"
-      unfolding deljiv_8_def
-      by simp
-    hence"(x mod 10) mod 8 = 0"
-      by (metis \<open>x mod 8 = 0\<close> dvd_eq_mod_eq_0 mod_mod_cancel mod_mult_self1_is_0 mult_2_right numeral_Bit0)
-    thus ?thesis
-      by (simp add: deljiv_8_def jednocifren_zavrsetak_mod_10)
-qed
-qed
-(**deljivost 11**)
-(*broj je deljiv sa 11 ako mu je razlika zbira cifara na neparnim i parnim mestima deljiva sa 11*)
-fun izdvoj_neparne :: "nat list \<Rightarrow> nat list" where 
-  "izdvoj_neparne [x] =[x]"|
-  "izdvoj_neparne (x#y#xs) = x # izdvoj_neparne xs"
-
-fun izdvoj_parne :: "nat list \<Rightarrow> nat list" where 
-  "izdvoj_parne [x] =[]"|
-  "izdvoj_parne (x#y#xs) = y # izdvoj_parne xs"
-
-definition deljiv_11 ::"nat \<Rightarrow> bool" where
-"deljiv_11 x \<equiv> (sum_list(izdvoj_neparne(izdvoj_cifre x)) - sum_list(izdvoj_neparne(izdvoj_cifre x))) mod 11 = 0 "
-
-lemma deljiv_11_k: "deljiv_11 x \<longleftrightarrow> (\<exists> k. x = 11* k)" 
-proof
-  assume "deljiv_11 x"
-  show "\<exists> k. x = 11 * k"
-  proof- 
-    sorry
- qed
-next
-  assume "\<exists> k. x = 11* k"
-  show "deljiv_11 x"
-  proof-
-    sorry
-  qed
-qed
 end
